@@ -26,6 +26,9 @@ internaldocs/
 *.out
 *.pem
 
+# Built binaries
+outrig-server
+
 # Yarn Modern
 .pnp.*
 .yarn/*
