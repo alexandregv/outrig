@@ -201,6 +201,9 @@ func runMonitorForeground(cmd *cobra.Command, args []string) error {
 }
 
 func runMonitorStart(cmd *cobra.Command, args []string) error {
+	// Get the quiet flag from the persistent flags
+	quiet, _ := cmd.Root().PersistentFlags().GetBool("quiet")
+	
 	// Load default config to check if monitor is already running
 	cfg, err := loadOutrigConfig("", "")
 	if err != nil {
@@ -211,7 +214,9 @@ func runMonitorStart(cmd *cobra.Command, args []string) error {
 	version, _, peerAddr, err := comm.GetServerVersion(cfg)
 	if err == nil {
 		// Monitor is already running
-		fmt.Printf("Outrig monitor already running (version %s) on %s\n", version, peerAddr)
+		if !quiet {
+			fmt.Fprintf(os.Stderr, "Outrig monitor already running (version %s) on %s\n", version, peerAddr)
+		}
 		return nil
 	}
 
@@ -261,8 +266,10 @@ func runMonitorStart(cmd *cobra.Command, args []string) error {
 	}
 
 	// Output daemon information
-	fmt.Printf("Outrig monitor started (pid %d)\n", daemonCmd.Process.Pid)
-	fmt.Printf("Logs: %s\n", logPath)
+	if !quiet {
+		fmt.Fprintf(os.Stderr, "Outrig monitor started (pid %d)\n", daemonCmd.Process.Pid)
+		fmt.Fprintf(os.Stderr, "Logs: %s\n", logPath)
+	}
 
 	// Verification loop - try to connect for up to 3 seconds
 	startTime := time.Now()
@@ -280,10 +287,12 @@ func runMonitorStart(cmd *cobra.Command, args []string) error {
 		version, port, _, err := comm.GetServerVersion(cfg)
 		if err == nil {
 			// Successfully connected
-			if port != 0 {
-				fmt.Printf("Monitor started successfully (version %s) http://localhost:%d\n", version, port)
-			} else {
-				fmt.Printf("Monitor started successfully (version %s)\n", version)
+			if !quiet {
+				if port != 0 {
+					fmt.Fprintf(os.Stderr, "Monitor started successfully (version %s) http://localhost:%d\n", version, port)
+				} else {
+					fmt.Fprintf(os.Stderr, "Monitor started successfully (version %s)\n", version)
+				}
 			}
 
 			// Don't wait for the process - let it run independently
@@ -587,6 +596,7 @@ Example: outrig --dev exec ls -latrh`,
 	rootCmd.PersistentFlags().MarkHidden("dev")
 	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "Verbose output")
 	rootCmd.PersistentFlags().MarkHidden("verbose")
+	rootCmd.PersistentFlags().BoolP("quiet", "q", false, "Suppress startup messages")
 	rootCmd.PersistentFlags().Bool("norun", false, "Stop 'run' mode after generating new source files")
 	rootCmd.PersistentFlags().MarkHidden("norun")
 	rootCmd.PersistentFlags().Bool("no-monitor-autostart", false, "Disable automatic monitor startup")
